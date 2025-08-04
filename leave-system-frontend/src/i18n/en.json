@@ -1,0 +1,21 @@
+{
+  "hero_title": "Professional Leave Management Platform",
+  "app_name": "LeaveFlow",
+  "rights_reserved": "All rights reserved",
+  "sustainable_solutions": "Sustainable Solutions",
+  "image_text": "Streamline leave management with a smart, efficient, and user-friendly system tailored for modern workplaces.",
+  "employee_login": "Employee Login",
+  "new_account": "New Account",
+  "welcome_back": "Welcome Back",
+  "access_dashboard": "Access your leave dashboard and manage requests",
+  "work_email": "Work Email",
+  "email_placeholder": "employee@company.com",
+  "password": "Password",
+  "password_placeholder": "********",
+  "remember_me": "Remember me",
+  "forgot_password": "Forgot password?",
+  "access_dashboard_button": "Access Dashboard",
+  "join_your_team": "Join Your Team",
+  "create_account": "Create your professional leave management account",
+  "create_account_button": "Create Account"
+}

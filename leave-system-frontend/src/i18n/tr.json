@@ -1,0 +1,21 @@
+{
+  "hero_title": "Profesyonel İzin Yönetim Platformu",
+  "app_name": "GreenLeave",
+  "rights_reserved": "Tüm hakları saklıdır",
+  "sustainable_solutions": "Sürdürülebilir Çözümler",
+  "image_text": "Modern iş yerleri için özel olarak tasarlanmış akıllı, verimli ve kullanıcı dostu bir sistemle izin yönetimini kolaylaştırın.",
+  "employee_login": "Çalışan Girişi",
+  "new_account": "Yeni Hesap",
+  "welcome_back": "Tekrar Hoşgeldiniz",
+  "access_dashboard": "İzin panonuza erişin ve talepleri yönetin",
+  "work_email": "Çalışma E-postası",
+  "email_placeholder": "calisan@firma.com",
+  "password": "Şifre",
+  "password_placeholder": "********",
+  "remember_me": "Beni Hatırla",
+  "forgot_password": "Şifremi unuttum?",
+  "access_dashboard_button": "Panoya Eriş",
+  "join_your_team": "Takımınıza Katılın",
+  "create_account": "Kendi profesyonel izin yönetim hesabınızı oluşturun",
+  "create_account_button": "Hesap Oluştur"
+}
