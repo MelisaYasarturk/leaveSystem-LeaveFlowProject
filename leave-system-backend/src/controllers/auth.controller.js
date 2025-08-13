@@ -233,5 +233,7 @@ const resetPassword = async (req, res) => {
     }
 };
 
+
+
 // dışarı aktarıyoruz ki routes'da da kullanılabilsin
 module.exports = { register, login, forgotPassword, resetPassword };

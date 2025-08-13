@@ -3,7 +3,7 @@ import imageLogin from "./image_login.png"; // Ensure this points to the correct
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { jwtDecode } from 'jwt-decode';
-import API from '../api/api';
+import API, { AnnualLeaveAPI } from '../api/api';
 import { useNavigate } from 'react-router-dom';
 
 /*import AuthForm from '../components/AuthForm'; // az sonra oluşturacağın bileşen
@@ -15,6 +15,7 @@ export default function AuthPage() {
   );
 }
 */
+
 
 
 export default function LoginRegisterToggle() {
@@ -34,9 +35,13 @@ export default function LoginRegisterToggle() {
   const [rememberMe, setRememberMe] = useState(false);
 
 
+const { t, i18n } = useTranslation();
+
+  const changeLanguage = (lang) => {
+    i18n.changeLanguage(lang);
+  };
 
 
-    const { t } = useTranslation();
   const handleLogin = async (e) => {
   e.preventDefault();
 
@@ -107,25 +112,25 @@ if (registerPassword !== registerConfirmPassword) {
 
   return (
   <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex flex-col items-center justify-center px-4 py-10 text-gray-700">
-      <h1 className="text-4xl md:text-5xl  text-center text-green-700 mb-12">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-center text-green-700 mb-8 md:mb-12 px-2">
   {/*{t('hero_title')}*/}
   Professional Leave Management Platform
 </h1>
 
-      <div className="flex w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
+      <div className="flex flex-col lg:flex-row w-full max-w-6xl bg-white rounded-xl shadow-lg overflow-hidden">
         
         {/* Image Section */}
-        <div className="flex-1 flex flex-col items-center py-8 px-6">
-          <img src={imageLogin} alt="Login Visual" className="mb-4 w-full max-w-md" />
-          <h2 className="text-lg font-medium text-center">Sustainable Solutions</h2>
-          <p className="text-sm text-gray-500 text-center">
+        <div className="flex-1 flex flex-col items-center py-6 md:py-8 px-4 md:px-6 order-2 lg:order-1">
+          <img src={imageLogin} alt="Login Visual" className="mb-4 w-full max-w-xs md:max-w-md" />
+          <h2 className="text-base md:text-lg font-medium text-center">Sustainable Solutions</h2>
+          <p className="text-sm text-gray-500 text-center max-w-sm">
            {/* {t('image_text')}*/}
            Streamline leave management with a smart, efficient, and user-friendly system tailored for modern workplaces.
           </p>
         </div>
 
 {/* Login/Register Form Section */}
-<div className="w-1/2 p-6">
+<div className="w-full lg:w-1/2 p-4 md:p-6 order-1 lg:order-2">
   <div className="flex border-b border-gray-200 mb-4">
     <button
       onClick={() => setIsLogin(true)}
@@ -150,7 +155,7 @@ if (registerPassword !== registerConfirmPassword) {
   {/* Form */}
   <form
     onSubmit={isLogin ? handleLogin : handleRegister}
-    className="space-y-6"
+    className="space-y-4 md:space-y-6"
   >
     {isLogin ? (
       <>
@@ -167,7 +172,7 @@ if (registerPassword !== registerConfirmPassword) {
             type="email"
             required
             placeholder="employee@company.com"
-            className="w-full border border-gray-300 rounded-md p-2 mt-1"
+            className="w-full border border-gray-300 rounded-md p-2 mt-1 text-sm md:text-base"
             value={loginEmail}
             onChange={(e) => setLoginEmail(e.target.value)}
           />
@@ -179,13 +184,13 @@ if (registerPassword !== registerConfirmPassword) {
             type={showPassword.login ? "text" : "password"}
             required
             placeholder="********"
-            className="w-full border border-gray-300 rounded-md p-2 mt-1"
+            className="w-full border border-gray-300 rounded-md p-2 mt-1 text-sm md:text-base"
             value={loginPassword}
             onChange={(e) => setLoginPassword(e.target.value)}
           />
         </label>
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
           <label className="inline-flex items-center">
             <input
               type="checkbox"
@@ -193,11 +198,11 @@ if (registerPassword !== registerConfirmPassword) {
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
             />
-            <span className="ml-2">Remember me</span>
+            <span className="ml-2 text-sm">Remember me</span>
           </label>
           <button
             type="button"
-            className="text-blue-600 hover:underline"
+            className="text-blue-600 hover:underline text-sm"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -211,7 +216,7 @@ if (registerPassword !== registerConfirmPassword) {
 
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-3 rounded-md"
+          className="w-full bg-blue-600 text-white py-3 rounded-md text-sm md:text-base font-medium"
         >
           Access Dashboard
         </button>
@@ -231,7 +236,7 @@ if (registerPassword !== registerConfirmPassword) {
             type="text"
             required
             placeholder="Your Name"
-            className="w-full border border-gray-300 rounded-md p-2 mt-1"
+            className="w-full border border-gray-300 rounded-md p-2 mt-1 text-sm md:text-base"
             value={registerName}
             onChange={(e) => setRegisterName(e.target.value)}
           />
@@ -243,7 +248,7 @@ if (registerPassword !== registerConfirmPassword) {
             type="email"
             required
             placeholder="you@company.com"
-            className="w-full border border-gray-300 rounded-md p-2 mt-1"
+            className="w-full border border-gray-300 rounded-md p-2 mt-1 text-sm md:text-base"
             value={registerEmail}
             onChange={(e) => setRegisterEmail(e.target.value)}
           />
@@ -255,7 +260,7 @@ if (registerPassword !== registerConfirmPassword) {
             type={showPassword.register ? "text" : "password"}
             required
             placeholder="********"
-            className="w-full border border-gray-300 rounded-md p-2 mt-1"
+            className="w-full border border-gray-300 rounded-md p-2 mt-1 text-sm md:text-base"
             value={registerPassword}
             onChange={(e) => setRegisterPassword(e.target.value)}
           />
@@ -267,7 +272,7 @@ if (registerPassword !== registerConfirmPassword) {
             type={showPassword.register ? "text" : "password"}
             required
             placeholder="********"
-            className="w-full border border-gray-300 rounded-md p-2 mt-1"
+            className="w-full border border-gray-300 rounded-md p-2 mt-1 text-sm md:text-base"
             value={registerConfirmPassword}
             onChange={(e) => setRegisterConfirmPassword(e.target.value)}
           />
@@ -275,7 +280,7 @@ if (registerPassword !== registerConfirmPassword) {
 
         <button
           type="submit"
-          className="w-full bg-green-600 text-white py-3 rounded-md"
+          className="w-full bg-green-600 text-white py-3 rounded-md text-sm md:text-base font-medium"
         >
           Register Account
         </button>
@@ -283,42 +288,25 @@ if (registerPassword !== registerConfirmPassword) {
     )}
   </form>
 
-  {/* Forgot Password Link - Form dışında */}
-  {isLogin && (
-    <div className="mt-4 text-center">
-      <button
-        type="button"
-        className="text-blue-600 hover:text-blue-800 text-sm underline"
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          console.log('Forgot password clicked');
-          navigate('/forgot-password');
-        }}
-      >
-        {t('forgot_password')}
-      </button>
-    </div>
-  )}
 </div>
 
       </div>
 
       {/* Footer Section */}
-      <><div className="mt-10 max-w-md text-center text-gray-600 text-sm">
+      <><div className="mt-6 md:mt-10 max-w-md text-center text-gray-600 text-sm">
     {/* <p>
         &copy; {new Date().getFullYear()} {t('app_name')}. {t('rights_reserved')}
      </p>*/}
-  </div><div className="mt-10 max-w-md text-center text-gray-600 text-sm">
-      <p className="mb-8">
+  </div><div className="mt-6 md:mt-10 max-w-4xl w-full text-center text-gray-600 text-sm px-4">
+      <p className="mb-6 md:mb-8">
         Complete leave management solution for modern workplaces
       </p>
 
-      <div className="grid grid-cols-4 gap-4 mb-6 text-gray-700">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 text-gray-700">
         <div className="flex flex-col items-center text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-green-600 mb-1"
+            className="h-5 w-5 md:h-6 md:w-6 text-green-600 mb-1"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -335,7 +323,7 @@ if (registerPassword !== registerConfirmPassword) {
         <div className="flex flex-col items-center text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-blue-700 mb-1"
+            className="h-5 w-5 md:h-6 md:w-6 text-blue-700 mb-1"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -352,7 +340,7 @@ if (registerPassword !== registerConfirmPassword) {
         <div className="flex flex-col items-center text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-orange-400 mb-1"
+            className="h-5 w-5 md:h-6 md:w-6 text-orange-400 mb-1"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -369,7 +357,7 @@ if (registerPassword !== registerConfirmPassword) {
         <div className="flex flex-col items-center text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="h-6 w-6 text-purple-600 mb-1"
+            className="h-5 w-5 md:h-6 md:w-6 text-purple-600 mb-1"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -386,7 +374,7 @@ if (registerPassword !== registerConfirmPassword) {
       </div>
 
       <div className="text-xs mb-2 text-gray-500">
-        <div className="inline-flex space-x-4">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-4">
           <span className="flex items-center space-x-1">
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -445,7 +433,7 @@ if (registerPassword !== registerConfirmPassword) {
         Powering the future with clean, renewable energy
       </p>
 
-      <div className="flex justify-center space-x-8 text-sm font-semibold">
+      <div className="flex flex-wrap justify-center gap-4 sm:gap-8 text-sm font-semibold">
         <span className="text-orange-500 flex items-center space-x-1">
           <svg
             xmlns="http://www.w3.org/2000/svg"

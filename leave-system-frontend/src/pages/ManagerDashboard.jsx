@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, LogOut, Plus, BarChart3, Filter, X, ChevronLeft, ChevronRight, Users, MessageSquare, Check, XCircle, Clock } from 'lucide-react';
 import axios from 'axios';
+import API, { AnnualLeaveAPI } from '../api/api';
 
 function formatDate(dateStr) {
   const date = new Date(dateStr);
@@ -197,12 +198,13 @@ const ManagerDashboard = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'APPROVED': return 'bg-green-500 text-white';
-      case 'PENDING': return 'bg-orange-500 text-white';
-      case 'REJECTED': return 'bg-red-500 text-white';
-      default: return 'bg-gray-500 text-white';
-    }
-  };
+      case 'APPROVED': return 'bg-green-100 text-green-800';
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+      case 'REJECTED': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
 
   const filteredRequests = statusFilter === 'All Status' 
     ? leaveRequests 
@@ -272,7 +274,9 @@ const ManagerDashboard = () => {
   const nextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
-const user = JSON.parse(localStorage.getItem("user"));
+  
+  const user = JSON.parse(localStorage.getItem("user"));
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -395,20 +399,12 @@ const user = JSON.parse(localStorage.getItem("user"));
                           {request.reason}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            request.status === 'PENDING'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : request.status === 'APPROVED'
-                              ? 'bg-green-100 text-green-800'
-                              : request.status === 'REJECTED'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-200 text-gray-700'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                             {request.status.charAt(0) + request.status.slice(1).toLowerCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(request.createdAt)}
+                          {formatDate(request.createdAt || request.appliedDate || new Date())}
                         </td>
                       </tr>
                     ))}
@@ -640,7 +636,7 @@ const user = JSON.parse(localStorage.getItem("user"));
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(request.createdAt)}
+                          {formatDate(request.createdAt || request.appliedDate || new Date())}
                         </td>
                       </tr>
                     ))}
@@ -773,7 +769,7 @@ const user = JSON.parse(localStorage.getItem("user"));
                                 {request?.user?.name || 'Unknown Employee'}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {request?.user?.department?.name || 'Unknown Department'}
+                                {request?.user?.department?.name || request?.user?.Department?.name || 'Unknown Department'}
                               </div>
                             </div>
                           </div>
@@ -791,20 +787,12 @@ const user = JSON.parse(localStorage.getItem("user"));
                           {request.reason}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            request.status === 'PENDING'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : request.status === 'APPROVED'
-                              ? 'bg-green-100 text-green-800'
-                              : request.status === 'REJECTED'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-200 text-gray-700'
-                          }`}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(request.status)}`}>
                             {request.status.charAt(0) + request.status.slice(1).toLowerCase()}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(request.createdAt)}
+                          {formatDate(request.createdAt || request.appliedDate || new Date())}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex space-x-2">

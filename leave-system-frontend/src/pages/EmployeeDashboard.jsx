@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, LogOut, Plus, BarChart3, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
+import API, { AnnualLeaveAPI } from '../api/api';
 
 const user = JSON.parse(localStorage.getItem("user"));
 
@@ -30,26 +31,46 @@ const EmployeeDashboard = () => {
   });
 
   useEffect(() => {
-    const fetchLeaves = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5050/api/leave/mine', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+  const fetchLeaves = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // İzin bilgileri
+      const response = await axios.get('http://localhost:5050/api/leave/mine', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-        const { leaves, usedDays, remainingDays, totalLeaveDays } = response.data;
+      const { leaves, usedDays, remainingDays, totalLeaveDays } = response.data;
 
-        setLeaveRequests(leaves);
-        setUsedDays(usedDays);
-        setRemainingDays(remainingDays);
-        setTotalLeaveDays(totalLeaveDays);
-      } catch (error) {
-        console.error('İzin verileri çekilemedi:', error);
+      setLeaveRequests(leaves);
+      setUsedDays(usedDays);
+      setRemainingDays(remainingDays);
+      setTotalLeaveDays(totalLeaveDays);
+
+      // Çalışan bilgilerini de çek (başlangıç tarihi için)
+      const userResponse = await axios.get('http://localhost:5050/api/user/profile', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Çalışanın başlangıç tarihini kontrol et ve bilgi göster
+      if (userResponse.data.user) {
+        const startDate = new Date(userResponse.data.user.startDate);
+        const now = new Date();
+        const yearsOfService = (now - startDate) / (1000 * 60 * 60 * 24 * 365.25);
+        
+        // 5 yıl geçmişse bildirim göster
+        if (yearsOfService >= 5 && totalLeaveDays === 28) {
+          // Başarılı güncelleme bildirimi (optional)
+          console.log('Tebrikler! 5+ yıl hizmet nedeniyle yıllık izin hakkınız 28 güne çıkarıldı.');
+        }
       }
-    };
+    } catch (error) {
+      console.error('İzin verileri çekilemedi:', error);
+    }
+  };
 
-    fetchLeaves();
-  }, []);
+  fetchLeaves();
+}, []);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -346,6 +367,39 @@ const user = JSON.parse(localStorage.getItem("user"));
                 </button>
               </div>
             </div>
+
+            {/* Service Years Info - Leave Overview'dan önce eklenecek */}
+<div className="bg-white rounded-lg shadow p-6">
+  <div className="flex items-center mb-4">
+    <Calendar className="h-5 w-5 text-blue-400 mr-2" />
+    <h2 className="text-lg font-medium text-gray-900">Service Information</h2>
+  </div>
+  <div className="space-y-4">
+    {user?.startDate && (
+      <>
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-500">Start Date</span>
+          <span className="text-sm font-medium">
+            {new Date(user.startDate).toLocaleDateString('tr-TR')}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-sm text-gray-500">Years of Service</span>
+          <span className="text-sm font-medium">
+            {Math.floor((new Date() - new Date(user.startDate)) / (1000 * 60 * 60 * 24 * 365.25))} years
+          </span>
+        </div>
+        {((new Date() - new Date(user.startDate)) / (1000 * 60 * 60 * 24 * 365.25)) >= 5 && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-3">
+            <p className="text-sm text-green-700 font-medium">
+              🎉 Congratulations! You're eligible for 28 annual leave days due to 5+ years of service.
+            </p>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+</div>
 
             {/* Leave Overview */}
             <div className="bg-white rounded-lg shadow p-6">

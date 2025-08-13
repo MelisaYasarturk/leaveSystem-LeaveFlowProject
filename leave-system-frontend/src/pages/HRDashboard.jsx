@@ -4,11 +4,63 @@ import {
   Trash2, Edit3, Search, Building2, UserCheck, Clock, 
   PieChart, TrendingUp, Eye, CheckCircle, XCircle 
 } from 'lucide-react';
-import API from '../api/api';
+import API, { AnnualLeaveAPI } from '../api/api';
 
 function formatDate(dateStr) {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('tr-TR');
+  if (!dateStr) return 'N/A';
+  try {
+    let date;
+    
+    // Handle different date formats more robustly
+    if (typeof dateStr === 'string') {
+      // Handle ISO string, yyyy-mm-dd, or other string formats
+      if (dateStr.includes('T')) {
+        // ISO format like "2024-01-15T10:30:00.000Z"
+        date = new Date(dateStr);
+      } else if (dateStr.includes('-')) {
+        // Date format like "2024-01-15"
+        date = new Date(dateStr + 'T00:00:00');
+      } else {
+        // Try parsing as is
+        date = new Date(dateStr);
+      }
+    } else if (dateStr instanceof Date) {
+      date = dateStr;
+    } else if (typeof dateStr === 'number') {
+      // Unix timestamp
+      date = new Date(dateStr);
+    } else {
+      return 'N/A';
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateStr);
+      return 'N/A';
+    }
+    
+    // Format date consistently
+    return date.toLocaleDateString('tr-TR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  } catch (error) {
+    console.error('Date formatting error:', error, dateStr);
+    return 'N/A';
+  }
+}
+
+// Enhanced date formatting function specifically for applied dates
+function formatAppliedDate(dateStr) {
+  if (!dateStr) {
+    // If no date provided, use current date as fallback
+    console.warn('No applied date provided, using current date');
+    return formatDate(new Date());
+  }
+  
+  const formatted = formatDate(dateStr);
+  return formatted === 'N/A' ? formatDate(new Date()) : formatted;
 }
 
 function calculateLeaveDays(start, end) {
@@ -66,18 +118,57 @@ const HRDashboard = () => {
   const [tempRole, setTempRole] = useState('');
   const [tempDepartment, setTempDepartment] = useState('');
 
-  // Mock current user - replace with real auth
-  const currentUser = {
-    id: 3,
-    name: 'Ceyda HR',
-    role: 'HR',
-    isApprover: true
-  };
+  // Current user state - Real auth data
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Initialize current user from localStorage or API
+  useEffect(() => {
+    const initializeUser = () => {
+      try {
+        const storedUser = localStorage.getItem('user');
+        const storedRole = localStorage.getItem('role');
+        const storedUserId = localStorage.getItem('userId');
+        
+        if (storedUser && storedRole && storedUserId) {
+          const user = JSON.parse(storedUser);
+          setCurrentUser({
+            id: parseInt(storedUserId),
+            name: user.name || 'HR User',
+            role: storedRole.toUpperCase(),
+            isApprover: storedRole.toLowerCase() === 'hr' || storedRole.toLowerCase() === 'manager'
+          });
+        } else {
+          // Fallback to default HR user
+          setCurrentUser({
+            id: 3,
+            name: 'HR User',
+            role: 'HR',
+            isApprover: true
+          });
+        }
+        setLoading(false);
+      } catch (error) {
+        console.error('User initialization error:', error);
+        setCurrentUser({
+          id: 3,
+          name: 'HR User',
+          role: 'HR',
+          isApprover: true
+        });
+        setLoading(false);
+      }
+    };
+
+    initializeUser();
+  }, []);
 
   // Fetch all data on component mount
   useEffect(() => {
-    fetchHRData();
-  }, []);
+    if (currentUser) {
+      fetchHRData();
+    }
+  }, [currentUser]);
 
   const fetchHRData = async () => {
     try {
@@ -85,7 +176,16 @@ const HRDashboard = () => {
       const myLeavesRes = await API.get('/leave/mine');
       
       if (myLeavesRes.data) {
-        setMyLeaveRequests(myLeavesRes.data.leaves || []);
+        // Enhanced data processing with better date handling
+        const processedLeaves = (myLeavesRes.data.leaves || []).map(leave => ({
+          ...leave,
+          // Ensure dates are properly formatted
+          createdAt: leave.createdAt || leave.appliedDate || new Date().toISOString(),
+          startDate: leave.startDate,
+          endDate: leave.endDate
+        }));
+        
+        setMyLeaveRequests(processedLeaves);
         setUsedDays(myLeavesRes.data.usedDays || 0);
         setRemainingDays(myLeavesRes.data.remainingDays || 0);
         setTotalLeaveDays(myLeavesRes.data.totalLeaveDays || 0);
@@ -155,7 +255,13 @@ const HRDashboard = () => {
 
         const response = await API.post('/leave/create', newRequest);
 
-        setMyLeaveRequests([...myLeaveRequests, response.data.leave]);
+        // Enhanced new request processing with proper date
+        const processedNewLeave = {
+          ...response.data.leave,
+          createdAt: response.data.leave.createdAt || new Date().toISOString()
+        };
+
+        setMyLeaveRequests([...myLeaveRequests, processedNewLeave]);
         setLeaveFormData({ startDate: '', endDate: '', reason: '' });
         setShowLeaveModal(false);
         alert('Leave request submitted successfully!');
@@ -202,7 +308,7 @@ const HRDashboard = () => {
   };
 
   // Update user role - Fixed to actually update the role
-    const handleRoleUpdate = async (userId, newRole) => {
+  const handleRoleUpdate = async (userId, newRole) => {
     try {
       // Backend expects lowercase roles
       const roleToSend = newRole.toLowerCase();
@@ -258,10 +364,10 @@ const HRDashboard = () => {
     }
   };
 
-  // Filter functions - Fixed to work properly
+  // Filter functions - Fixed to work properly with case-insensitive status filtering
   const filteredMyLeaves = leaveStatusFilter === 'All Status' 
     ? myLeaveRequests 
-    : myLeaveRequests.filter(req => req.status === leaveStatusFilter);
+    : myLeaveRequests.filter(req => (req.status || '').toUpperCase() === leaveStatusFilter.toUpperCase());
 
   const filteredUsers = allUsers.filter(user => {
     const matchesRole = userRoleFilter === 'All Roles' || user.role === userRoleFilter;
@@ -272,12 +378,20 @@ const HRDashboard = () => {
     return matchesRole && matchesDept && matchesSearch;
   });
 
+  // Fixed filtering for all leaves - department filtering by name instead of ID and case-insensitive status
   const filteredAllLeaves = allLeaves.filter(leave => {
-    const matchesStatus = allLeavesStatusFilter === 'All Status' || leave.status === allLeavesStatusFilter;
+    const matchesStatus = allLeavesStatusFilter === 'All Status' || 
+                         (leave.status || '').toUpperCase() === allLeavesStatusFilter.toUpperCase();
     const matchesDept = allLeavesDepartmentFilter === 'All Departments' || 
-                       (leave.user?.department && leave.user.department.id === parseInt(allLeavesDepartmentFilter));
+                       (leave.user?.department?.name === allLeavesDepartmentFilter);
     return matchesStatus && matchesDept;
   });
+
+  if (loading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">Loading...</div>
+    </div>;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -295,7 +409,7 @@ const HRDashboard = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome back</span>
+              <span className="text-sm text-gray-600">Welcome back, {currentUser?.name}</span>
               <button 
                 onClick={handleLogout}
                 className="p-2 text-gray-400 hover:text-gray-500"
@@ -391,7 +505,7 @@ const HRDashboard = () => {
               </div>
             </div>
 
-            {/* My Leave Requests Table */}
+            {/* My Leave Requests Table - Fixed Applied date formatting */}
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
@@ -431,8 +545,9 @@ const HRDashboard = () => {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
-                              request.status === 'APPROVED' ? 'bg-green-500' :
-                              request.status === 'PENDING' ? 'bg-orange-500' : 'bg-red-500'
+                              (request.status || '').toUpperCase() === 'APPROVED' ? 'bg-green-500' :
+                              (request.status || '').toUpperCase() === 'PENDING' ? 'bg-yellow-500' : 
+                              (request.status || '').toUpperCase() === 'REJECTED' ? 'bg-red-500' : 'bg-gray-500'
                             }`}></span>
                             <div className="text-sm text-gray-900">
                               {formatDate(request.startDate)}<br />
@@ -448,19 +563,19 @@ const HRDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            request.status === 'PENDING'
+                            (request.status || '').toUpperCase() === 'PENDING'
                               ? 'bg-yellow-100 text-yellow-800'
-                              : request.status === 'APPROVED'
+                              : (request.status || '').toUpperCase() === 'APPROVED'
                               ? 'bg-green-100 text-green-800'
-                              : request.status === 'REJECTED'
+                              : (request.status || '').toUpperCase() === 'REJECTED'
                               ? 'bg-red-100 text-red-800'
                               : 'bg-gray-200 text-gray-700'
                           }`}>
-                            {request.status.charAt(0) + request.status.slice(1).toLowerCase()}
+                            {request.status ? request.status.toUpperCase().charAt(0) + request.status.slice(1).toLowerCase() : 'Unknown'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(request.createdAt)}
+                          {formatAppliedDate(request.createdAt || request.appliedDate || request.submittedAt)}
                         </td>
                       </tr>
                     ))}
@@ -931,7 +1046,7 @@ const HRDashboard = () => {
         </div>
       )}
 
-      {/* All Leaves Modal - Fixed filtering */}
+      {/* All Leaves Modal - Fixed filtering and removed approval actions for self */}
       {showAllLeavesModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[80vh] overflow-y-auto">
@@ -963,7 +1078,7 @@ const HRDashboard = () => {
                   >
                     <option>All Departments</option>
                     {departments.map((dept) => (
-                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                      <option key={dept.id} value={dept.name}>{dept.name}</option>
                     ))}
                   </select>
                 </div>
@@ -1030,23 +1145,23 @@ const HRDashboard = () => {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            leave.status === 'PENDING'
+                            (leave.status || '').toUpperCase() === 'PENDING'
                               ? 'bg-yellow-100 text-yellow-800'
-                              : leave.status === 'APPROVED'
+                              : (leave.status || '').toUpperCase() === 'APPROVED'
                               ? 'bg-green-100 text-green-800'
-                              : leave.status === 'REJECTED'
+                              : (leave.status || '').toUpperCase() === 'REJECTED'
                               ? 'bg-red-100 text-red-800'
                               : 'bg-gray-200 text-gray-700'
                           }`}>
-                            {leave.status.charAt(0) + leave.status.slice(1).toLowerCase()}
+                            {leave.status ? leave.status.toUpperCase().charAt(0) + leave.status.slice(1).toLowerCase() : 'Unknown'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(leave.createdAt)}
+                          {formatAppliedDate(leave.createdAt || leave.appliedDate || leave.submittedAt)}
                         </td>
                         {(currentUser.role === 'MANAGER' || currentUser.isApprover) && (
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            {leave.status === 'PENDING' && (
+                            {(leave.status || '').toUpperCase() === 'PENDING' && leave.userId !== currentUser.id && (
                               <div className="flex space-x-2">
                                 <button
                                   onClick={() => alert('Approve functionality - connect to backend')}

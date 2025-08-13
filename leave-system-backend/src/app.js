@@ -21,6 +21,7 @@ const testRoutes = require('./routes/test.routes');
 const leaveRoutes = require('./routes/leave.routes');
 const managerRoutes = require('./routes/manager.routes');
 const hrRoutes = require('./routes/hr.routes');
+const employeeRoutes = require('./routes/employee.routes');
 
 //route’u kaydediyoruz: /api/auth altındaki tüm istekler authRoutes içinde tanımlanacak
 app.use('/api/auth' , authRoutes);
@@ -28,6 +29,11 @@ app.use('/api/test', testRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/manager', managerRoutes);
 app.use('/api/hr', hrRoutes);
+app.use('/api/hr', employeeRoutes);
+
+const { scheduleAnnualLeaveUpdate } = require('./jobs/annualLeaveJob');
+// Scheduled job'u başlat
+scheduleAnnualLeaveUpdate();
 
 app.get('/', (req, res) => {
   res.send('API çalışıyor 🚀');
