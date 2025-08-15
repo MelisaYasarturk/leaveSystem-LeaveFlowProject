@@ -3,6 +3,99 @@ import { Calendar, LogOut, Plus, BarChart3, Filter, X, ChevronLeft, ChevronRight
 import axios from 'axios';
 import API, { AnnualLeaveAPI } from '../api/api';
 
+// Tarih formatlama fonksiyonu
+function formatDate(dateStr) {
+  if (!dateStr) return 'N/A';
+  try {
+    let date;
+    
+    // Handle different date formats more robustly
+    if (typeof dateStr === 'string') {
+      // Handle ISO string, yyyy-mm-dd, or other string formats
+      if (dateStr.includes('T')) {
+        // ISO format like "2024-01-15T10:30:00.000Z"
+        date = new Date(dateStr);
+      } else if (dateStr.includes('-')) {
+        // Date format like "2024-01-15"
+        date = new Date(dateStr + 'T00:00:00');
+      } else {
+        // Try parsing as is
+        date = new Date(dateStr);
+      }
+    } else if (dateStr instanceof Date) {
+      date = dateStr;
+    } else if (typeof dateStr === 'number') {
+      // Unix timestamp
+      date = new Date(dateStr);
+    } else {
+      return 'N/A';
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateStr);
+      return 'N/A';
+    }
+    
+    // Format date consistently
+    return date.toLocaleDateString('tr-TR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  } catch (error) {
+    console.error('Date formatting error:', error, dateStr);
+    return 'N/A';
+  }
+}
+
+// Çalışma yılını hesapla (backend ile aynı mantık)
+function calculateYearsOfService(startDate) {
+  try {
+    if (!startDate) return 'N/A';
+    
+    const now = new Date();
+    const start = new Date(startDate);
+    
+    // Geçersiz tarih kontrolü
+    if (isNaN(start.getTime())) {
+      console.warn('Geçersiz startDate:', startDate);
+      return 'N/A';
+    }
+    
+    // Yıl, ay ve gün olarak hesapla (daha hassas)
+    const yearDiff = now.getFullYear() - start.getFullYear();
+    const monthDiff = now.getMonth() - start.getMonth();
+    const dayDiff = now.getDate() - start.getDate();
+    
+    // Tam yıl hesaplama
+    let yearsOfService = yearDiff;
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      yearsOfService--;
+    }
+    
+    // Ondalık kısmı da hesapla (ay bazında)
+    let decimalPart = 0;
+    if (monthDiff >= 0) {
+      decimalPart = monthDiff / 12;
+      if (dayDiff >= 0) {
+        decimalPart += dayDiff / 365.25;
+      }
+    } else {
+      decimalPart = (12 + monthDiff) / 12;
+      if (dayDiff >= 0) {
+        decimalPart += dayDiff / 365.25;
+      }
+    }
+    
+    const result = (yearsOfService + decimalPart).toFixed(1);
+    return isNaN(result) ? 'N/A' : result;
+  } catch (error) {
+    console.error('Years of service hesaplama hatası:', error);
+    return 'N/A';
+  }
+}
+
 const user = JSON.parse(localStorage.getItem("user"));
 
 console.log(user?.name);      // Kullanıcının ismi
@@ -20,6 +113,8 @@ const EmployeeDashboard = () => {
   const [totalLeaveDays, setTotalLeaveDays] = useState(0);
   const [usedDays, setUsedDays] = useState(0);
   const [remainingDays, setRemainingDays] = useState(0);
+  const [yearsOfService, setYearsOfService] = useState(0);
+  const [expectedLeaveDays, setExpectedLeaveDays] = useState(0);
 
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -40,12 +135,14 @@ const EmployeeDashboard = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      const { leaves, usedDays, remainingDays, totalLeaveDays } = response.data;
+      const { leaves, usedDays, remainingDays, totalLeaveDays, yearsOfService, expectedLeaveDays } = response.data;
 
       setLeaveRequests(leaves);
       setUsedDays(usedDays);
       setRemainingDays(remainingDays);
       setTotalLeaveDays(totalLeaveDays);
+      setYearsOfService(yearsOfService || 0);
+      setExpectedLeaveDays(expectedLeaveDays || totalLeaveDays);
 
       // Çalışan bilgilerini de çek (başlangıç tarihi için)
       const userResponse = await axios.get('http://localhost:5050/api/user/profile', {
@@ -54,12 +151,10 @@ const EmployeeDashboard = () => {
       
       // Çalışanın başlangıç tarihini kontrol et ve bilgi göster
       if (userResponse.data.user) {
-        const startDate = new Date(userResponse.data.user.startDate);
-        const now = new Date();
-        const yearsOfService = (now - startDate) / (1000 * 60 * 60 * 24 * 365.25);
+        const calculatedYears = calculateYearsOfService(userResponse.data.user.startDate);
         
         // 5 yıl geçmişse bildirim göster
-        if (yearsOfService >= 5 && totalLeaveDays === 28) {
+        if (calculatedYears >= 5 && totalLeaveDays === 28) {
           // Başarılı güncelleme bildirimi (optional)
           console.log('Tebrikler! 5+ yıl hizmet nedeniyle yıllık izin hakkınız 28 güne çıkarıldı.');
         }
@@ -150,17 +245,17 @@ const EmployeeDashboard = () => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  const isLeaveDay = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return leaveRequests.some(leave => {
-      if (leave.status === 'Approved') {
-        const startDate = new Date(leave.startDate);
-        const endDate = new Date(leave.endDate);
-        return date >= startDate && date <= endDate;
-      }
-      return false;
-    });
-  };
+     const isLeaveDay = (date) => {
+     const dateStr = date.toISOString().split('T')[0];
+     return leaveRequests.some(leave => {
+       if (leave.status === 'Approved' || leave.status === 'APPROVED') {
+         const startDate = new Date(leave.startDate);
+         const endDate = new Date(leave.endDate);
+         return date >= startDate && date <= endDate;
+       }
+       return false;
+     });
+   };
 
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
@@ -264,10 +359,14 @@ const user = JSON.parse(localStorage.getItem("user"));
                   <span>Used this year: {usedDays} days</span>
                   <span>{Math.round((remainingDays / totalLeaveDays) * 100)}% remaining</span>
                 </div>
+                
+                                 
               </div>
-            </div>
+                         </div>
 
-            {/* Leave Requests Table */}
+
+
+             {/* Leave Requests Table */}
             <div className="bg-white rounded-lg shadow">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
@@ -368,38 +467,7 @@ const user = JSON.parse(localStorage.getItem("user"));
               </div>
             </div>
 
-            {/* Service Years Info - Leave Overview'dan önce eklenecek */}
-<div className="bg-white rounded-lg shadow p-6">
-  <div className="flex items-center mb-4">
-    <Calendar className="h-5 w-5 text-blue-400 mr-2" />
-    <h2 className="text-lg font-medium text-gray-900">Service Information</h2>
-  </div>
-  <div className="space-y-4">
-    {user?.startDate && (
-      <>
-        <div className="flex justify-between">
-          <span className="text-sm text-gray-500">Start Date</span>
-          <span className="text-sm font-medium">
-            {new Date(user.startDate).toLocaleDateString('tr-TR')}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-gray-500">Years of Service</span>
-          <span className="text-sm font-medium">
-            {Math.floor((new Date() - new Date(user.startDate)) / (1000 * 60 * 60 * 24 * 365.25))} years
-          </span>
-        </div>
-        {((new Date() - new Date(user.startDate)) / (1000 * 60 * 60 * 24 * 365.25)) >= 5 && (
-          <div className="bg-green-50 border border-green-200 rounded-md p-3">
-            <p className="text-sm text-green-700 font-medium">
-              🎉 Congratulations! You're eligible for 28 annual leave days due to 5+ years of service.
-            </p>
-          </div>
-        )}
-      </>
-    )}
-  </div>
-</div>
+            
 
             {/* Leave Overview */}
             <div className="bg-white rounded-lg shadow p-6">

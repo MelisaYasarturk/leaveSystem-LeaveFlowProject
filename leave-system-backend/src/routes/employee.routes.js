@@ -2,6 +2,8 @@
 const express = require('express');
 const router = express.Router();
 const EmployeeService = require('../services/employeeService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 // Tüm çalışanları getir (güncel annual leave ile)
 router.get('/', async (req, res) => {
@@ -55,6 +57,23 @@ router.post('/update-annual-leave', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Çalışanın kendi izin durumunu getir
+router.get('/:id/leave-status', async (req, res) => {
+  try {
+    const userId = Number(req.params.id);
+    const leaveStatus = await EmployeeService.getUserLeaveStatus(userId);
+    
+    if (!leaveStatus) {
+      return res.status(404).json({ message: 'Kullanıcı bulunamadı' });
+    }
+    
+    res.json(leaveStatus);
+  } catch (error) {
+    console.error('İzin durumu getirme hatası:', error);
+    res.status(500).json({ message: 'İzin durumu getirme hatası', error: error.message });
   }
 });
 

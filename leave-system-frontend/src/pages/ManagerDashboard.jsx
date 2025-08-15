@@ -16,6 +16,53 @@ function calculateLeaveDays(start, end) {
   return days;
 }
 
+// Çalışma yılını hesapla (backend ile aynı mantık)
+function calculateYearsOfService(startDate) {
+  try {
+    if (!startDate) return 'N/A';
+    
+    const now = new Date();
+    const start = new Date(startDate);
+    
+    // Geçersiz tarih kontrolü
+    if (isNaN(start.getTime())) {
+      console.warn('Geçersiz startDate:', startDate);
+      return 'N/A';
+    }
+    
+    // Yıl, ay ve gün olarak hesapla (daha hassas)
+    const yearDiff = now.getFullYear() - start.getFullYear();
+    const monthDiff = now.getMonth() - start.getMonth();
+    const dayDiff = now.getDate() - start.getDate();
+    
+    // Tam yıl hesaplama
+    let yearsOfService = yearDiff;
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      yearsOfService--;
+    }
+    
+    // Ondalık kısmı da hesapla (ay bazında)
+    let decimalPart = 0;
+    if (monthDiff >= 0) {
+      decimalPart = monthDiff / 12;
+      if (dayDiff >= 0) {
+        decimalPart += dayDiff / 365.25;
+      }
+    } else {
+      decimalPart = (12 + monthDiff) / 12;
+      if (dayDiff >= 0) {
+        decimalPart += dayDiff / 365.25;
+      }
+    }
+    
+    const result = (yearsOfService + decimalPart).toFixed(1);
+    return isNaN(result) ? 'N/A' : result;
+  } catch (error) {
+    console.error('Years of service hesaplama hatası:', error);
+    return 'N/A';
+  }
+}
+
 const ManagerDashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -201,21 +248,24 @@ const ManagerDashboard = () => {
       case 'APPROVED': return 'bg-green-100 text-green-800';
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       case 'REJECTED': return 'bg-red-100 text-red-800';
+      case 'Approved': return 'bg-green-100 text-green-800';
+      case 'Pending': return 'bg-yellow-100 text-yellow-800';
+      case 'Rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
-  }
-};
+    }
+  };
 
 
   const filteredRequests = statusFilter === 'All Status' 
     ? leaveRequests 
-    : leaveRequests.filter(req => req.status === statusFilter);
+    : leaveRequests.filter(req => (req.status || '').toUpperCase() === statusFilter.toUpperCase());
 
   const filteredTeamRequests = teamStatusFilter === 'All Status'
     ? teamRequests
-    : teamRequests.filter(req => req.status === teamStatusFilter);
+    : teamRequests.filter(req => (req.status || '').toUpperCase() === teamStatusFilter.toUpperCase());
 
-  const pendingRequests = leaveRequests.filter(req => req.status === 'PENDING').length;
-  const pendingTeamRequests = teamRequests.filter(req => req.status === 'PENDING').length;
+  const pendingRequests = leaveRequests.filter(req => (req.status || '').toUpperCase() === 'PENDING').length;
+  const pendingTeamRequests = teamRequests.filter(req => (req.status || '').toUpperCase() === 'PENDING').length;
 
   // Calendar functions
   const getDaysInMonth = (date) => {
@@ -226,17 +276,17 @@ const ManagerDashboard = () => {
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
-  const isLeaveDay = (date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return leaveRequests.some(leave => {
-      if (leave.status === 'APPROVED') {
-        const startDate = new Date(leave.startDate);
-        const endDate = new Date(leave.endDate);
-        return date >= startDate && date <= endDate;
-      }
-      return false;
-    });
-  };
+     const isLeaveDay = (date) => {
+     const dateStr = date.toISOString().split('T')[0];
+     return leaveRequests.some(leave => {
+       if (leave.status === 'APPROVED' || leave.status === 'Approved') {
+         const startDate = new Date(leave.startDate);
+         const endDate = new Date(leave.endDate);
+         return date >= startDate && date <= endDate;
+       }
+       return false;
+     });
+   };
 
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
@@ -340,6 +390,8 @@ const ManagerDashboard = () => {
                   <span>Used this year: {usedDays} days</span>
                   <span>{Math.round((remainingDays / totalLeaveDays) * 100)}% remaining</span>
                 </div>
+                
+                
               </div>
             </div>
 
@@ -450,6 +502,8 @@ const ManagerDashboard = () => {
                 </button>
               </div>
             </div>
+
+            
 
             {/* Leave Overview */}
             <div className="bg-white rounded-lg shadow p-6">

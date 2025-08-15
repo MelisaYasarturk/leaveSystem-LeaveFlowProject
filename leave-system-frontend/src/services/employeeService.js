@@ -5,34 +5,22 @@ const prisma = new PrismaClient();
 class EmployeeService {
   // Tek bir çalışan için yıllık izin hesapla
   static calculateAnnualLeave(startDate) {
-    try {
-      if (!startDate) {
-        console.warn('StartDate bulunamadı, varsayılan 14 gün döndürülüyor');
-        return 14;
-      }
-      
-      const now = new Date();
-      const start = new Date(startDate);
-      
-      // Geçersiz tarih kontrolü
-      if (isNaN(start.getTime())) {
-        console.warn('Geçersiz startDate:', startDate, 'varsayılan 14 gün döndürülüyor');
-        return 14;
-      }
-      
-      // Milisaniye cinsinden farkı hesapla
-      const timeDiff = now.getTime() - start.getTime();
-      const daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
-      const yearsOfService = daysDiff / 365.25; // 365.25 gün = 1 yıl (artık yıl hesabı)
-      
-      // 5 yıl tamamlandıysa 28 gün, değilse 14 gün
-      const result = yearsOfService >= 5 ? 28 : 14;
-      console.log(`Hesaplama: startDate=${startDate}, daysDiff=${daysDiff}, yearsOfService=${yearsOfService.toFixed(2)}, result=${result}`);
-      return result;
-    } catch (error) {
-      console.error('calculateAnnualLeave hatası:', error, 'startDate:', startDate);
-      return 14; // Hata durumunda varsayılan değer
+    const now = new Date();
+    const start = new Date(startDate);
+    
+    // Yıl, ay ve gün olarak hesapla (daha hassas)
+    const yearDiff = now.getFullYear() - start.getFullYear();
+    const monthDiff = now.getMonth() - start.getMonth();
+    const dayDiff = now.getDate() - start.getDate();
+    
+    // Tam yıl hesaplama
+    let yearsOfService = yearDiff;
+    if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+      yearsOfService--;
     }
+    
+    // 5 yıl tamamlandıysa 28 gün, değilse 14 gün
+    return yearsOfService >= 5 ? 28 : 14;
   }
 
   // Tüm çalışanların yıllık iznini güncelle (hem User hem Employee modelleri için)
@@ -98,19 +86,6 @@ class EmployeeService {
       return results;
     } catch (error) {
       console.error('Yıllık izin güncelleme hatası:', error);
-      throw error;
-    }
-  }
-
-  // Manuel güncelleme için wrapper fonksiyon
-  static async manualUpdateAllLeave() {
-    try {
-      console.log('Manuel izin güncelleme başladı...');
-      const result = await this.updateAllAnnualLeave();
-      console.log('Manuel güncelleme tamamlandı:', result);
-      return result;
-    } catch (error) {
-      console.error('Manuel güncelleme hatası:', error);
       throw error;
     }
   }

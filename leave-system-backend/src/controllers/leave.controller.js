@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const EmployeeService = require('../services/employeeService');
 
 //İzin talebi oluşturma
 const createLeave = async (req, res) => {
@@ -82,6 +83,19 @@ const getMyLeaves = async (req, res) => {
 
     // 4- Kullanıcının toplam yıllık izin hakkını çek ve kalan izini hesapla
     const user = await prisma.user.findUnique({ where: { id: userId } });
+    
+    // Güncel yıllık izin gününü hesapla (5 yıl kontrolü ile)
+    const currentAnnualLeave = EmployeeService.calculateAnnualLeave(user.startDate);
+    
+    // Eğer veritabanındaki değer güncel değilse, güncelle
+    if (user.annualLeaveDays !== currentAnnualLeave) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { annualLeaveDays: currentAnnualLeave }
+      });
+      user.annualLeaveDays = currentAnnualLeave;
+    }
+    
     const remainingDays = user.annualLeaveDays - usedDays;
 
     // 5- Verileri frontend’e yolla
@@ -90,6 +104,8 @@ const getMyLeaves = async (req, res) => {
       usedDays,           // kullanılan gün sayısı
       remainingDays,      // kalan izin günü
       totalLeaveDays: user.annualLeaveDays,  // toplam izin hakkı
+      yearsOfService: EmployeeService.calculateYearsOfService(user.startDate), // çalışma yılı
+      expectedLeaveDays: currentAnnualLeave, // beklenen izin günü
     });
   } catch (err) {
     console.error(err);

@@ -68,6 +68,7 @@ const getAllUsersAlphabetically = async (req, res) => {
         department: user.department?.name || 'Departman yok',
         departmentId: user.department?.id || null,
         isApprover: user.isApprover,
+        startDate: user.startDate,
         createdAt: user.createdAt
       };
     });
@@ -197,7 +198,7 @@ const getAllLeaves = async (req, res) => {
  * Gerekli bilgiler: name, email, password, role, departmentId
  */
 const createUserByHR = async (req, res) => {
-    const { name, email, password, role, departmentId } = req.body;
+    const { name, email, password, role, departmentId, startDate } = req.body;
 
     const validRoles = [ 'employee', 'manager', 'hr'] ;
 
@@ -206,7 +207,7 @@ const createUserByHR = async (req, res) => {
         return res.status(400).json({message: 'Geçersiz rol.'});
     }
 
-    if (!name || !email || !password || !departmentId) {
+    if (!name || !email || !password || !departmentId || !startDate) {
         return res.status(400).json({ message: 'Tüm alanlar zorunludur.' });
    }    
 
@@ -215,6 +216,18 @@ const createUserByHR = async (req, res) => {
     const existingUser = await prisma.user.findUnique({ where: {email} });
     if (existingUser) {
         return res.status(409).json({message: 'Bu e-posta zaten kullanılıyor'});
+    }
+
+    // Tarih validasyonu
+    const parsedStartDate = new Date(startDate);
+    if (isNaN(parsedStartDate.getTime())) {
+        return res.status(400).json({ message: 'Geçersiz başlangıç tarihi.' });
+    }
+
+    // Tarih formatını kontrol et (YYYY-MM-DD formatında olmalı)
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(startDate)) {
+        return res.status(400).json({ message: 'Tarih formatı YYYY-MM-DD olmalıdır.' });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -226,6 +239,7 @@ const createUserByHR = async (req, res) => {
             password: hashedPassword,
             role,
             departmentId: Number(departmentId),
+            startDate: parsedStartDate,
         },
     });
 

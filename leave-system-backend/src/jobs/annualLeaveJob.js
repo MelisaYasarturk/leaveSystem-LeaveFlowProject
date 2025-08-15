@@ -2,9 +2,9 @@
 const cron = require('node-cron');
 const EmployeeService = require('../services/employeeService');
 
-// Her gün gece yarısı çalışsın
+// Her 10 dakikada bir çalışsın (5 yıl tamamlandığında hemen güncellensin)
 const scheduleAnnualLeaveUpdate = () => {
-  cron.schedule('0 0 * * *', async () => {
+  cron.schedule('*/10 * * * *', async () => {
     console.log('Yıllık izin güncelleme job\'u başladı...');
     try {
       await EmployeeService.updateAllAnnualLeave();

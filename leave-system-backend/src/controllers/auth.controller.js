@@ -125,7 +125,8 @@ const login = async (req, res) =>{
                 id: user.id,
                 name: user.name,
                 email: user.email,
-                role: user.role
+                role: user.role,
+                department: user.department?.name || null, 
             },
         });
     } catch (err) {
