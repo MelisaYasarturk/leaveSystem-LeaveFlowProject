@@ -5,10 +5,10 @@ class EmailService {
   constructor() {
     // E-posta konfigürasyonu
     this.config = {
-      service: 'SendGrid', // ✅ Gmail yerine SendGrid kullanıyoruz
+      service: 'SendGrid', //  Gmail yerine SendGrid kullanıyoruz
       auth: {
-        user: 'apikey', // ✅ SendGrid için hep "apikey"
-        pass: process.env.SENDGRID_API_KEY // ✅ .env dosyasından API key
+        user: 'apikey', //  SendGrid için hep "apikey"
+        pass: process.env.SENDGRID_API_KEY //  .env dosyasından API key
       }
     };
 
