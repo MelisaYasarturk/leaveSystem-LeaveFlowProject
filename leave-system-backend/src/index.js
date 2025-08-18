@@ -1,3 +1,5 @@
+require('dotenv').config(); 
+
 // app.js içindeki Express uygulamasını al (middleware, router vs. burada tanımlanmıştı)
 const app = require('./app');
 
